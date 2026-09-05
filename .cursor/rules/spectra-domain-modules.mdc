@@ -1,0 +1,52 @@
+---
+description: Spectra NGO domain modules — unified stock, dogs, POS, HR/payroll (revised spec)
+alwaysApply: true
+---
+
+# Spectra NGO — Domain Modules (revised)
+
+## A — Unified procurement & stock
+
+- One GRN can mix food, meds/vaccines, and staff retail on the same challan
+- Lines: supplier, batch, expiry, qty, unit landed cost → batches + supplier AP
+- Month-end: one payment clears supplier running tab
+- All outwards (consumption, vaccine, staff POS) use **same FEFO**
+
+## B — Dogs & medical
+
+- Categories (spec): `ADULT_KENNEL`, `PUPPY_NURSERY`, `POST_OP_WARD`, `CRITICAL_ISOLATION`  
+  Code today: `CareSection` `ADULT` / `JUVENILE` / `POST_OP` / `CRITICAL` — keep mapping; don’t fork
+- Append-only notes; treatment/food outwards are request → manager issue → FEFO (₹0 clinical); managers may still issue food directly; next due + “due today” only after issue
+- Census → theoretical feed (tenant grams/day); alert if food issue **>15%** vs theory
+
+## C — Consumption & audits
+
+- Multi-item MIN: food + meds in one voucher
+- Cost centers (target): `KENNEL_FEEDING`, `CLINICAL_TREATMENT`, `EMERGENCY_RESCUE`
+- Audit reasons (target): `SPOILAGE_ROTTEN`, `SPILLAGE_WASTAGE`, `UNACCOUNTED_LEAKAGE`, `BATCH_DAMAGE`
+- States: `FLAGGED_UNCERTAIN` → `APPROVED_WRITE_OFF` | `REJECTED_AUDIT` (legacy: `REJECTED`)
+
+## D — Staff POS (from unified stock)
+
+- Tender: `PAYROLL_CREDIT` or Cash; credit guardrail vs unpaid dues + limit
+- Passbook: receipts, lines, pending month balance
+- No separate public external retail module unless explicitly added later
+
+## E — Attendance / leave / LOP
+
+- Leave: `PAID_CASUAL`, `PAID_SICK`, `UNPAID_LEAVE_LOP`, `HALF_DAY_LOP`
+- Default: all working days are **present**. Do not mark daily attendance.
+- Record **absences only**. Paid leave does not cut pay; LOP days × daily wage are deducted on payroll.
+
+## F — Payroll
+
+- Net = base − LOP − store dues − other
+- States (target): `DRAFT` → `LOCKED` → `APPROVED` → `DISBURSED` (LOCKED not in code yet)
+- On approve: POS → `DEDUCTED_IN_PAYROLL`; leaves → `PAYROLL_PROCESSED`
+- Cap net at ₹0; rollover leftover store debt; printable itemized payslip
+
+## G — Ops (optional extension)
+
+- OpEx / fuel / dog-expense / analytics under `/api/ops` — keep branch-scoped
+---
+

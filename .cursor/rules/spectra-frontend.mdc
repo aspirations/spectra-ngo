@@ -1,0 +1,42 @@
+---
+description: Next.js mobile-first UI conventions for Spectra NGO
+globs: frontend/**/*.{ts,tsx,css}
+alwaysApply: false
+---
+
+# Spectra Frontend
+
+App Router under `frontend/`. Auth + branch via existing providers; call API through `lib/api` (JWT + `X-Branch-Id`).
+
+## UX requirements
+
+- **Mobile-first**: drawer nav, touch-friendly controls, horizontal scroll tables OK; no desktop-only critical flows
+- Role-gate nav items (`app-shell`); hide platform NGO admin from NGO users and vice versa
+- Branch selector required for NGO users; ops respect active branch
+- Forms: TanStack Query mutations; invalidate related keys on success
+- Prefer existing UI primitives (`components/ui/*`) over new design systems
+
+## Core screens (keep / extend — don’t duplicate)
+
+| Area | Route ideas |
+|------|-------------|
+| Dogs | residents / dog hub, notes, vaccine modal |
+| Inventory | Unified GRN (mixed lines), consumption, `/inventory/audit` |
+| Staff store | POS + passbook (same stockroom products) |
+| HR | `/leave` absences only (paid or LOP); no attendance calendar |
+| Payroll | runs, payslip |
+| Ops | `/ops` OpEx / fuel / alerts |
+
+## Example
+
+```tsx
+// ❌ BAD — fetch without shared client (drops tenant/branch headers)
+await fetch("/api/inventory/batches");
+
+// ✅ GOOD
+await api<Batch[]>("/api/inventory/batches");
+```
+
+Preserve sand/ink brand tokens already in the app; don’t introduce purple/glow dashboard clichés on branded pages.
+---
+

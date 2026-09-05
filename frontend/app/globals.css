@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --sand: #f6f1e8;
+  --ink: #14221c;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  @apply bg-sand text-ink antialiased;
+}
+
+.desk {
+  @apply space-y-2;
+}
+
+::selection {
+  background: #cfe8d8;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}

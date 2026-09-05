@@ -1,0 +1,47 @@
+---
+description: Spectra NGO ERP product vision, tenancy, hierarchy, and RBAC
+alwaysApply: true
+---
+
+# Spectra NGO — Core ERP
+
+Multi-tenant dog-shelter NGO ERP. Shared PostgreSQL + `tenant_id`. Never leak across tenants/branches.
+
+## Stack
+
+- Backend: Java 21, Spring Boot 3, JPA/Hibernate, JWT (stateless), Flyway
+- Frontend: Next.js App Router + TS, Tailwind, Lucide, shadcn-style, TanStack Query
+- API: `/api` · envelope `{ success, data, message, errorCode }`
+- Demo password (seed): `Spectra@123`
+
+## Org hierarchy (revised)
+
+`Tenant (NGO)` → `Branch` → Users (+ `user_branches`)
+
+**Unified inventory (canonical):** each branch has **one physical stockroom**. Dog food, vaccines/meds, and staff retail goods share the same inward GRN, batches, and FEFO engine. Do **not** design new features around separate shelter vs retail warehouses.
+
+Legacy code may still have `SHELTER_STORE` / `STAFF_RETAIL_STORE` + split product tables — treat as tech debt to converge on one warehouse + one product catalog (flags/categories for retail vs clinical).
+
+Working context = branch (`X-Branch-Id` + JWT). `PLATFORM_ADMIN` provisions NGOs only.
+
+## Roles
+
+| Role | Scope |
+|------|--------|
+| `PLATFORM_ADMIN` | Create/enable NGOs |
+| `NGO_ADMIN` | Spec SUPER_ADMIN: branches, users, cross-branch, company payroll |
+| `BRANCH_ADMIN` | Leave, audit write-off, vendor settle, branch payroll |
+| `INVENTORY_MANAGER` | Unified GRN, audits, consumption, Staff POS, expiry |
+| `VET_TECH_EMPLOYEE` | Dogs, notes, vaccines, feeding |
+| `EMPLOYEE` | Leave / LOP, credit buy, passbook, payslip |
+
+Never reintroduce `SUPER_ADMIN` enum — map to `NGO_ADMIN`.
+
+## Non-negotiables
+
+- Mobile-first touch UI
+- Schema only via Flyway
+- `TenantContext` + `@TenantId` on every write path
+- Extend modules; no parallel microservice split
+---
+

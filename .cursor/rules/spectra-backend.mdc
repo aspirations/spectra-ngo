@@ -1,0 +1,42 @@
+---
+description: Spring Boot / Flyway / JWT / FEFO conventions for Spectra backend
+globs: backend/**/*.{java,sql,yml,yaml,properties}
+alwaysApply: false
+---
+
+# Spectra Backend
+
+Package root: `com.dertz.spectra`. Context path `/api`.
+
+## Security & tenancy
+
+- Stateless JWT; claims drive `TenantContext` (`tenantId`, `branchId`, `userId`, `role`)
+- Validate `X-Branch-Id` against user’s allowed branches (except platform-only routes)
+- Every tenant entity: `tenant_id` + Hibernate `@TenantId` / filters; never query without tenant scope
+- Clear `TenantContext` in finally after seed/async work
+
+## Persistence
+
+- Schema **only** via Flyway under `backend/src/main/resources/db/migration/`
+- Next migration = max `V{n}` + 1; additive, reversible-friendly; indexes on `(tenant_id, …)`
+- Services own transactions (`@Transactional`); controllers stay thin
+- FEFO is shared — vaccines, multi-item consumption, staff POS, audit write-offs reuse one allocate path (unified warehouse target; do not add a second stock engine)
+
+## API
+
+- Envelope: `ApiResponse` `{ success, data, message, errorCode }`
+- Role gates on controllers must match `.cursor/rules` RBAC (inventory manager may run ops menus; cannot create `NGO_ADMIN` / `PLATFORM_ADMIN`)
+- Prefer existing services (`InventoryService`, `DogService`, `PayrollService`, `OpsDomainService`, …) over new god-classes
+
+## Example
+
+```java
+// ❌ BAD — adjust qty outside FEFO / audit review
+batch.setQtyOnHand(physical);
+
+ // ✅ GOOD — flag audit, then review → APPROVED_WRITE_OFF applies delta via service
+inventoryService.flagAudit(request);
+inventoryService.reviewAudit(id, writeOff);
+```
+---
+
