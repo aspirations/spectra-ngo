@@ -1,6 +1,7 @@
 "use client";
 
 import { api, can, fetchPdfObjectUrl, getUser } from "@/lib/api";
+import { ExportExcelButton } from "@/components/export-excel-button";
 import { Button } from "@/components/ui/button";
 import { Combobox, toProductOptions } from "@/components/ui/combobox";
 import { Fold } from "@/components/ui/fold";
@@ -8,6 +9,7 @@ import { Card, Input, Label, Select, Textarea } from "@/components/ui/input";
 import { PageControls, pageSlice } from "@/components/ui/pager";
 import { PageHeader } from "@/components/ui/page-header";
 import { PdfPreview } from "@/components/pdf-preview";
+import { downloadSpreadsheet, spreadsheetFilename } from "@/lib/export-spreadsheet";
 import { inr, pretty } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -402,7 +404,51 @@ export default function PurchaseOrderPage() {
       )}
 
       <Card>
-        <h2 className="mb-2 font-semibold">Recent</h2>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="font-semibold">Recent</h2>
+          <ExportExcelButton
+            disabled={!pos.data?.length}
+            onClick={() => {
+              const rows = (pos.data ?? []).flatMap((p) => {
+                const lines = p.lines?.length ? p.lines : [undefined];
+                return lines.map((l) => [
+                  p.poNumber,
+                  pretty(p.status),
+                  p.supplierName ?? "",
+                  p.requestedByName ?? "",
+                  Number(p.expectedTotal),
+                  Number(p.receivedTotal ?? 0),
+                  l ? (l.productName ?? `Product ${l.shelterProductId}`) : "",
+                  l?.sku ?? "",
+                  l ? Number(l.qtyOrdered) : "",
+                  l ? Number(l.unitCost) : "",
+                  l ? Number(l.qtyReceived) : "",
+                  l ? Number(l.damagedQty) : "",
+                  p.notes ?? "",
+                ]);
+              });
+              downloadSpreadsheet(
+                spreadsheetFilename("po"),
+                [
+                  "PO",
+                  "Status",
+                  "Supplier",
+                  "Requested by",
+                  "Expected",
+                  "Received",
+                  "Product",
+                  "SKU",
+                  "Qty ordered",
+                  "Unit cost",
+                  "Qty received",
+                  "Damaged",
+                  "Notes",
+                ],
+                rows,
+              );
+            }}
+          />
+        </div>
         <ul className="space-y-2 text-sm">
           {recent.slice.map((p) => {
             const open = openPo === p.id;

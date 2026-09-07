@@ -2,12 +2,14 @@
 
 import { api, getUser, Role, User } from "@/lib/api";
 import { CatalogProductForm } from "@/components/catalog-product-form";
+import { ExportExcelButton } from "@/components/export-excel-button";
 import { Button } from "@/components/ui/button";
 import { Combobox, toResidentOptions, toStaffOptions } from "@/components/ui/combobox";
 import { Card, Input, Label, Select } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { PageControls, pageSlice } from "@/components/ui/pager";
 import { PageHeader, SearchField } from "@/components/ui/page-header";
+import { downloadSpreadsheet, spreadsheetFilename } from "@/lib/export-spreadsheet";
 import { cn, inr, pretty } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -565,7 +567,45 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
 
       {shop && (
         <Card>
-          <h2 className="mb-2 font-semibold">Recent sales</h2>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="font-semibold">Recent sales</h2>
+            <ExportExcelButton
+              disabled={!shopOrders.data?.length}
+              onClick={() => {
+                const rows = (shopOrders.data ?? []).flatMap((row) => {
+                  const items = row.items.length ? row.items : [{ qty: 0, unitPrice: 0, lineTotal: 0 }];
+                  return items.map((item) => [
+                    row.order.orderNumber,
+                    row.order.orderAt?.replace("T", " ").slice(0, 16) ?? "",
+                    pretty(row.order.status),
+                    pretty(row.order.tender),
+                    row.employeeName ?? "",
+                    item.productName ?? (item.productId ? `SKU ${item.productId}` : ""),
+                    Number(item.qty),
+                    Number(item.unitPrice),
+                    Number(item.lineTotal),
+                    Number(row.order.total),
+                  ]);
+                });
+                downloadSpreadsheet(
+                  spreadsheetFilename("sales"),
+                  [
+                    "Order number",
+                    "Time",
+                    "Status",
+                    "Tender",
+                    "Employee",
+                    "Product",
+                    "Qty",
+                    "Unit price",
+                    "Line total",
+                    "Order total",
+                  ],
+                  rows,
+                );
+              }}
+            />
+          </div>
           {sales.total === 0 && <p className="text-sm text-ink/50">Nothing sold yet.</p>}
           <ul className="space-y-2 text-sm">
             {sales.slice.map((row) => (
@@ -598,7 +638,48 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
 
       {!shop && (
         <Card>
-          <h2 className="mb-2 font-semibold">Recent issues</h2>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="font-semibold">Recent issues</h2>
+            <ExportExcelButton
+              disabled={issued.length === 0}
+              onClick={() => {
+                const rows = issued.flatMap((c) => {
+                  const lines =
+                    (c.lines ?? []).length > 0
+                      ? c.lines!
+                      : [{ productName: "food", qty: c.actualQty ?? 0, residentName: undefined, shelterProductId: 0, id: 0 }];
+                  return lines.map((line) => [
+                    c.consumptionDate,
+                    pretty(c.type),
+                    pretty(c.status),
+                    line.productName ?? `SKU ${line.shelterProductId}`,
+                    Number(line.qty),
+                    line.residentName ?? "",
+                    c.takenByName ?? "",
+                    c.requestedByName ?? "",
+                    c.notes ?? "",
+                    c.varianceAlert ? Number(c.variancePct) : "",
+                  ]);
+                });
+                downloadSpreadsheet(
+                  spreadsheetFilename("issues"),
+                  [
+                    "Date",
+                    "Type",
+                    "Status",
+                    "Product",
+                    "Qty",
+                    "Dog",
+                    "Taken by",
+                    "Requested by",
+                    "Notes",
+                    "Feed variance",
+                  ],
+                  rows,
+                );
+              }}
+            />
+          </div>
           {issues.total === 0 && <p className="text-sm text-ink/50">Nothing issued yet.</p>}
           <ul className="space-y-2 text-sm">
             {issues.slice.map((c) => (
