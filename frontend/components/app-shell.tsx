@@ -132,12 +132,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <div className="min-h-screen bg-sand" />;
   }
 
+  const me = user;
   const showBranch = !platform && (branches.data?.length ?? 0) > 0;
   const brand = platform ? "Spectra Platform" : "Spectra";
   const pinnedSet = new Set(pinnedHrefs);
 
   function dockLabel(item: (typeof NAV)[number]) {
-    if (item.href === "/inventory/consume" && user.role === "EMPLOYEE") return "Request";
+    if (item.href === "/inventory/consume" && me.role === "EMPLOYEE") return "Request";
     return item.dock ?? item.label.split(" ")[0];
   }
 
@@ -150,7 +151,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   function togglePin(href: string, already: boolean) {
-    const next = already ? unpinHref(user.id, href, allowedHrefs) : pinHref(user.id, href, allowedHrefs);
+    const next = already ? unpinHref(me.id, href, allowedHrefs) : pinHref(me.id, href, allowedHrefs);
     setPinnedHrefs(next);
     if (!already) {
       setOpen(false);
@@ -173,7 +174,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       timer: window.setTimeout(() => {
         longPress.current = null;
         skipDockClick.current = true;
-        setPinnedHrefs(unpinHref(user.id, href, allowedHrefs));
+        setPinnedHrefs(unpinHref(me.id, href, allowedHrefs));
         if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(12);
       }, 500),
     };
@@ -198,7 +199,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const Icon = item.icon;
                 const active = item.href === activeHref;
                 const pinned = pinnedSet.has(item.href);
-                const label = item.href === "/inventory/consume" && user.role === "EMPLOYEE" ? "Request stock" : item.label;
+                const label = item.href === "/inventory/consume" && me.role === "EMPLOYEE" ? "Request stock" : item.label;
                 return (
                   <div key={item.href} className="flex items-center gap-0.5">
                     <Link
@@ -242,7 +243,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className={`flex items-center py-5 ${collapsed ? "justify-between px-4 md:justify-center md:px-3" : "justify-between px-4"}`}>
           <div className={`min-w-0 ${collapsed ? "md:hidden" : ""}`}>
             <p className="text-lg font-bold tracking-tight">{brand}</p>
-            <p className="truncate text-xs text-sand/60">{user.tenantName ?? user.tenantCode}</p>
+            <p className="truncate text-xs text-sand/60">{me.tenantName ?? me.tenantCode}</p>
           </div>
           <button type="button" className="rounded-xl p-2 md:hidden" onClick={() => setOpen(false)} aria-label="Close">
             <X size={20} />
@@ -278,8 +279,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Menu size={20} />
           </button>
           <div className="min-w-0 shrink-0 md:max-w-[10rem]">
-            <p className="truncate text-sm font-semibold">{user.fullName}</p>
-            <p className="truncate text-xs text-ink/50">{user.role.replaceAll("_", " ")}</p>
+            <p className="truncate text-sm font-semibold">{me.fullName}</p>
+            <p className="truncate text-xs text-ink/50">{me.role.replaceAll("_", " ")}</p>
           </div>
           <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex" aria-label="Pinned">
             {dock.map((item) => {
