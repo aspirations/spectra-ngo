@@ -1,11 +1,13 @@
 "use client";
 
 import { api } from "@/lib/api";
+import { ExportExcelButton } from "@/components/export-excel-button";
 import { Button } from "@/components/ui/button";
 import { Combobox, toResidentOptions, toStaffOptions } from "@/components/ui/combobox";
 import { Fold } from "@/components/ui/fold";
 import { Card, Input, Select, Textarea } from "@/components/ui/input";
 import { PageHeader, SearchField } from "@/components/ui/page-header";
+import { downloadSpreadsheet, spreadsheetFilename } from "@/lib/export-spreadsheet";
 import { inr, pretty } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
@@ -62,6 +64,7 @@ export default function OpsPage() {
   });
   const [dog, setDog] = useState({ residentId: "", label: "", amount: "" });
   const [slaQ, setSlaQ] = useState("");
+  const [opexExportBusy, setOpexExportBusy] = useState(false);
   const slaRows = useMemo(() => {
     const needle = slaQ.trim().toLowerCase();
     return (sla.data ?? []).filter((s) => !needle || s.fullName.toLowerCase().includes(needle));
@@ -120,6 +123,28 @@ export default function OpsPage() {
   if (snap.isLoading) return <p>Loading ops…</p>;
   if (snap.error) return <p className="text-clay">{(snap.error as Error).message}</p>;
   const d = snap.data!;
+
+  async function exportOpex() {
+    setOpexExportBusy(true);
+    try {
+      const rows = await api<Snapshot["recentExpenses"]>("/api/ops/expenses");
+      downloadSpreadsheet(
+        spreadsheetFilename("opex"),
+        ["Date", "Category", "Description", "Payment source", "Amount", "Vendor", "Receipt URL"],
+        rows.map((e) => [
+          e.expenseDate,
+          pretty(e.category),
+          e.description,
+          pretty(e.paymentSource),
+          Number(e.amount),
+          e.vendorName ?? "",
+          e.receiptUrl ?? "",
+        ]),
+      );
+    } finally {
+      setOpexExportBusy(false);
+    }
+  }
 
   function onOpex(e: FormEvent) {
     e.preventDefault();
@@ -282,7 +307,16 @@ export default function OpsPage() {
           ))}
         </ul>
       </CollapsibleCard>
-      <CollapsibleCard title="Recent OpEx" count={d.recentExpenses.length}>
+      <CollapsibleCard
+        title="Recent OpEx"
+        count={d.recentExpenses.length}
+        action={
+          <ExportExcelButton
+            disabled={!d.opexCount || opexExportBusy}
+            onClick={() => void exportOpex()}
+          />
+        }
+      >
         <ul className="mt-1 space-y-2 text-sm">
           {d.recentExpenses.length === 0 && <li className="text-ink/50">No expenses logged yet.</li>}
           {d.recentExpenses.map((e) => (
@@ -329,13 +363,24 @@ export default function OpsPage() {
   );
 }
 
-function CollapsibleCard({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+function CollapsibleCard({
+  title,
+  count,
+  action,
+  children,
+}: {
+  title: string;
+  count: number;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <Card>
       <details className="group">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold marker:content-none [&::-webkit-details-marker]:hidden">
           {title}
           <span className="flex items-center gap-2 text-sm font-normal text-ink/50">
+            {action}
             {count}
             <ChevronDown className="size-4 transition-transform duration-200 ease-out group-open:rotate-180" />
           </span>

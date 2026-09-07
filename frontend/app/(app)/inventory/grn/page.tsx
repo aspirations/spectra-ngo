@@ -2,6 +2,7 @@
 
 import { api } from "@/lib/api";
 import { CatalogProductForm } from "@/components/catalog-product-form";
+import { ExportExcelButton } from "@/components/export-excel-button";
 import { Button } from "@/components/ui/button";
 import { Combobox, toProductOptions } from "@/components/ui/combobox";
 import { Fold } from "@/components/ui/fold";
@@ -9,6 +10,7 @@ import { Card, Input, Label } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { PageControls, pageSlice } from "@/components/ui/pager";
 import { PageHeader } from "@/components/ui/page-header";
+import { downloadSpreadsheet, spreadsheetFilename } from "@/lib/export-spreadsheet";
 import { inr } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -390,7 +392,30 @@ export default function GrnPage() {
           </ul>
         </Card>
       )}
-      <Fold title="Recent GRNs">
+      <Fold
+        title="Recent GRNs"
+        hint={
+          <ExportExcelButton
+            disabled={!grns.data?.length}
+            onClick={() =>
+              downloadSpreadsheet(
+                spreadsheetFilename("grn"),
+                ["GRN", "Date", "PO", "Total", "Notes"],
+                (grns.data ?? []).map((g) => {
+                  const po = poLookup.data?.find((p) => p.id === g.purchaseOrderId);
+                  return [
+                    g.grnNumber,
+                    g.receivedAt ? String(g.receivedAt).slice(0, 10) : "",
+                    po?.poNumber ?? "walk-in",
+                    Number(g.totalAmount),
+                    g.notes ?? "",
+                  ];
+                }),
+              )
+            }
+          />
+        }
+      >
         <ul className="space-y-2 text-sm">
           {recent.slice.map((g) => {
             const po = poLookup.data?.find((p) => p.id === g.purchaseOrderId);
