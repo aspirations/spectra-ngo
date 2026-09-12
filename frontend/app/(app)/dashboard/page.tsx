@@ -1,6 +1,6 @@
 "use client";
 
-import { api, can, getUser } from "@/lib/api";
+import { api, can, getBranchId, getUser } from "@/lib/api";
 import { Card } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { inr, pretty } from "@/lib/utils";
@@ -127,7 +127,14 @@ function Kpi({
 export default function DashboardPage() {
   const q = useQuery({ queryKey: ["dashboard"], queryFn: () => api<Dash>("/api/dashboard") });
   if (q.isLoading) return <p className="text-sm text-ink/60">Loading operations dashboard…</p>;
-  if (q.error) return <p className="text-clay">{(q.error as Error).message}. Pick a working centre first.</p>;
+  if (q.error) {
+    return (
+      <p className="text-clay">
+        {(q.error as Error).message}
+        {!getBranchId() ? " Pick a working centre in the header." : ""}
+      </p>
+    );
+  }
   const d = q.data!;
   const charts = d.charts ?? {
     censusByCategory: [],
