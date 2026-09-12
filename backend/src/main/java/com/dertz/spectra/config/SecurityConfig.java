@@ -1,9 +1,11 @@
 package com.dertz.spectra.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -19,6 +21,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 @EnableWebSecurity
@@ -40,9 +44,22 @@ public class SecurityConfig {
 						.requestMatchers("/actuator/health").permitAll()
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.anyRequest().authenticated())
+				.exceptionHandling(ex -> ex
+						.authenticationEntryPoint((request, response, authException) ->
+								writeJson(response, HttpServletResponse.SC_UNAUTHORIZED, "Please sign in again", "UNAUTHORIZED"))
+						.accessDeniedHandler((request, response, accessDeniedException) ->
+								writeJson(response, HttpServletResponse.SC_FORBIDDEN, "No access to this resource", "FORBIDDEN")))
 				.authenticationProvider(authenticationProvider())
 				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
+	}
+
+	private void writeJson(HttpServletResponse response, int status, String message, String errorCode) throws java.io.IOException {
+		response.setStatus(status);
+		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+		response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+		String body = "{\"success\":false,\"data\":null,\"message\":\"" + message + "\",\"errorCode\":\"" + errorCode + "\"}";
+		response.getWriter().write(body);
 	}
 
 	@Bean

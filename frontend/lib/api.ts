@@ -131,9 +131,27 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const branch = getBranchId();
   if (branch) headers.set("X-Branch-Id", branch);
   const res = await fetch(path, { ...init, headers });
-  const body = (await res.json()) as ApiEnvelope<T>;
-  if (!res.ok || !body.success) {
-    throw new Error(body.message || `Request failed (${res.status})`);
+  const text = await res.text();
+  let body: ApiEnvelope<T> | null = null;
+  if (text) {
+    try {
+      body = JSON.parse(text) as ApiEnvelope<T>;
+    } catch {
+      throw new Error(res.ok ? "Invalid response from server" : `Request failed (${res.status})`);
+    }
+  }
+  if (!res.ok || !body?.success) {
+    if (res.status === 401 || res.status === 403) {
+      const onLogin = path.includes("/auth/login");
+      if (!onLogin && typeof window !== "undefined") {
+        clearSession();
+        if (!window.location.pathname.startsWith("/login")) {
+          window.location.replace("/login");
+        }
+      }
+      throw new Error(body?.message || (res.status === 401 ? "Please sign in again" : "No access — pick a working centre or sign in again"));
+    }
+    throw new Error(body?.message || `Request failed (${res.status})`);
   }
   return body.data;
 }
