@@ -8,6 +8,7 @@ backend/.mvn/wrapper/maven-wrapper.jar
 hs_err_pid*
 
 # Node / Next.js
+node_modules/
 frontend/node_modules/
 frontend/.next/
 frontend/out/
@@ -31,3 +32,6 @@ Thumbs.db
 .env
 *.pem
 application-local.yaml
+.neon
+.env.local
+.vercel

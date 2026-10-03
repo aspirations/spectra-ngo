@@ -31,11 +31,23 @@
       "skillPath": "skills/ask-sonner/SKILL.md",
       "computedHash": "f971641be0de21b2bb5dae38bc8ef5e0ee963844e71b7fae464ec9274d2507eb"
     },
+    "brainstorming": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/brainstorming/SKILL.md",
+      "computedHash": "74edf03ea6d24ef53db48677b93558d14a979bdf052ca3f57ecdca0c66791608"
+    },
     "design-taste-frontend": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
       "skillPath": "skills/taste-skill/SKILL.md",
       "computedHash": "899b84384f74f540ea5284d9b2e9234e050998b42eacc805410b518d4226c0b3"
+    },
+    "dispatching-parallel-agents": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/dispatching-parallel-agents/SKILL.md",
+      "computedHash": "1968923066f3b707eb01d1992cdf4c42284c3855f70253b9cd5000ff45fca13c"
     },
     "emil-design-eng": {
       "source": "emilkowalski/skills",
@@ -43,17 +55,71 @@
       "skillPath": "skills/emil-design-eng/SKILL.md",
       "computedHash": "87067d79205fdedc6d682891027dd9c7335486c4b4dc2e785638941a9d2e6061"
     },
+    "executing-plans": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/executing-plans/SKILL.md",
+      "computedHash": "c4c3d8b628c51114cd165fb8246fe02744cd8be180032328391252e653028d9b"
+    },
     "find-animation-opportunities": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
       "skillPath": "skills/find-animation-opportunities/SKILL.md",
       "computedHash": "c6b1d0f6d03a11f8772b1cef4ca5cc88301ae8641ac2697c85ffa87eb458e40a"
     },
+    "finishing-a-development-branch": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/finishing-a-development-branch/SKILL.md",
+      "computedHash": "8db5a922b242dd4e1bf824cb91c13b3e8d8e8a86d6ceaf7f0774eb9cce909d65"
+    },
     "improve-animations": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
       "skillPath": "skills/improve-animations/SKILL.md",
       "computedHash": "9cd956e91139211efa5e17fc5e1675b9a3f711ef38cbc92aa8f3fa5b626b7e12"
+    },
+    "neon": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon/SKILL.md",
+      "computedHash": "ad03440e3144c39d12aff2b31d444a2aea072a7fa475e7fef1ee2edd183f5ed0"
+    },
+    "neon-ai-gateway": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-ai-gateway/SKILL.md",
+      "computedHash": "39fb2673f241c7fbc4c83875631e92f54bbba56e0f277a54f53b7a7640a41851"
+    },
+    "neon-functions": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-functions/SKILL.md",
+      "computedHash": "b62b70950f5dee106e380fa99282b3d623e299fe456cd64683b6620e3f812b28"
+    },
+    "neon-object-storage": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-object-storage/SKILL.md",
+      "computedHash": "217f1728f7e11773f67a532da1e1708d203cf99d102daf3480ba99bd5804de13"
+    },
+    "neon-postgres": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-postgres/SKILL.md",
+      "computedHash": "2989af6804b11be25eb956dc0660ed503a3f4dd1c7a0b7bc8f3b5981e1db2270"
+    },
+    "neon-postgres-branches": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-postgres-branches/SKILL.md",
+      "computedHash": "e928e26915eee4c3c0d39b318bd96a5a77bed8e2a4453262a1732e7b48c16651"
+    },
+    "neon-postgres-egress-optimizer": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-postgres-egress-optimizer/SKILL.md",
+      "computedHash": "ac041a17c0e3cfa9976b56b6aa4095146e602c70c216977aa7bc8f57cc4736f2"
     },
     "pick-ui-library": {
       "source": "emilkowalski/skills",
@@ -67,42 +133,6 @@
       "skillPath": "skills/prototype/SKILL.md",
       "computedHash": "b1216a31a08fb02871f5b4ace7f31d0a1e2d9c86ddca74a37ed97d975f7bcaa2"
     },
-    "review-animations": {
-      "source": "emilkowalski/skills",
-      "sourceType": "github",
-      "skillPath": "skills/review-animations/SKILL.md",
-      "computedHash": "6f8d633d7884c1390eff7af4bfaf7a450e798f117e1d49a555e00819dc877f64"
-    },
-    "write-swift": {
-      "source": "emilkowalski/skills",
-      "sourceType": "github",
-      "skillPath": "skills/write-swift/SKILL.md",
-      "computedHash": "eed7281047cd249a8eba09c1fba0f1212cf20531ba1416da0382bb49a4e39b03"
-    },
-    "brainstorming": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/brainstorming/SKILL.md",
-      "computedHash": "74edf03ea6d24ef53db48677b93558d14a979bdf052ca3f57ecdca0c66791608"
-    },
-    "dispatching-parallel-agents": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/dispatching-parallel-agents/SKILL.md",
-      "computedHash": "1968923066f3b707eb01d1992cdf4c42284c3855f70253b9cd5000ff45fca13c"
-    },
-    "executing-plans": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/executing-plans/SKILL.md",
-      "computedHash": "c4c3d8b628c51114cd165fb8246fe02744cd8be180032328391252e653028d9b"
-    },
-    "finishing-a-development-branch": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/finishing-a-development-branch/SKILL.md",
-      "computedHash": "8db5a922b242dd4e1bf824cb91c13b3e8d8e8a86d6ceaf7f0774eb9cce909d65"
-    },
     "receiving-code-review": {
       "source": "obra/superpowers",
       "sourceType": "github",
@@ -114,6 +144,12 @@
       "sourceType": "github",
       "skillPath": "skills/requesting-code-review/SKILL.md",
       "computedHash": "d71cc01ba56d2325cf8af5f7c11837819b63ecd57de0bfdb812f7f3ff7751df8"
+    },
+    "review-animations": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/review-animations/SKILL.md",
+      "computedHash": "6f8d633d7884c1390eff7af4bfaf7a450e798f117e1d49a555e00819dc877f64"
     },
     "subagent-driven-development": {
       "source": "obra/superpowers",
@@ -150,6 +186,12 @@
       "sourceType": "github",
       "skillPath": "skills/verification-before-completion/SKILL.md",
       "computedHash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+    },
+    "write-swift": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/write-swift/SKILL.md",
+      "computedHash": "eed7281047cd249a8eba09c1fba0f1212cf20531ba1416da0382bb49a4e39b03"
     },
     "writing-plans": {
       "source": "obra/superpowers",
