@@ -1,0 +1,71 @@
+name: Deploy backend to VPS
+
+# Runs only for pushes to main (and manual runs of main from the Actions tab).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-vps.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_DIR: /opt/spectra
+      SERVICE: spectra # systemd unit name on the VPS
+      HEALTH_URL: http://localhost:8080/api/actuator/health
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Build jar (Java 25, matching the VPS runtime)
+        working-directory: backend
+        run: mvn -B -DskipTests package
+
+      - name: Prepare SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "${{ secrets.VPS_PORT || 22 }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload jar
+        run: |
+          JAR=$(ls backend/target/*.jar | grep -v original | head -n 1)
+          scp -i ~/.ssh/id_deploy -P "${{ secrets.VPS_PORT || 22 }}" "$JAR" \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$DEPLOY_DIR/app.jar.new"
+
+      - name: Swap jar, restart, health-check (rolls back on failure)
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "${{ secrets.VPS_PORT || 22 }}" \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "DEPLOY_DIR=$DEPLOY_DIR SERVICE=$SERVICE HEALTH_URL=$HEALTH_URL bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          cp -f app.jar app.jar.prev
+          mv -f app.jar.new app.jar
+          sudo systemctl restart "$SERVICE"
+          for i in $(seq 1 30); do
+            if curl -fsS "$HEALTH_URL" >/dev/null; then
+              echo "Deployed OK"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Health check failed, rolling back" >&2
+          cp -f app.jar.prev app.jar
+          sudo systemctl restart "$SERVICE"
+          exit 1
+          REMOTE

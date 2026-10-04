@@ -31,7 +31,7 @@ server:
 
 application:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001}
   seed:
     enabled: ${APPLICATION_SEED_ENABLED:true}
   security:

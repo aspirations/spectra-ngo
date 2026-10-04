@@ -47,9 +47,11 @@ export function Label({ children, className, ...props }: LabelHTMLAttributes<HTM
   );
 }
 
-export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
+export function Card({ className, children, id }: { className?: string; children: React.ReactNode; id?: string }) {
   return (
-    <div className={cn("rounded-2xl border border-moss/10 bg-white p-3 shadow-[0_1px_2px_rgba(15,28,23,0.04)]", className)}>
+    <div
+      id={id}
+      className={cn("rounded-2xl border border-moss/10 bg-white p-3 shadow-[0_1px_2px_rgba(15,28,23,0.04)]", className)}>
       {children}
     </div>
   );

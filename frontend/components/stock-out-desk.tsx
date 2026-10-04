@@ -25,6 +25,12 @@ type ShelterProduct = {
   category: string;
   lotTracked: boolean;
   qtyOnHand: number;
+  unit?: string;
+  barcode?: string;
+  vaccineIntervalDays?: number;
+  reorderLevel?: number;
+  unitPrice?: number;
+  unitCost?: number;
 };
 type ShopProduct = {
   id: number;
@@ -105,6 +111,8 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
   const [productOpen, setProductOpen] = useState(false);
   const [skuOpen, setSkuOpen] = useState(false);
   const [sku, setSku] = useState({ sku: "", name: "", unitPrice: "", barcode: "" });
+  const [editingSkuId, setEditingSkuId] = useState<number | null>(null);
+  const [editProduct, setEditProduct] = useState<ShelterProduct | null>(null);
 
   const shelterProducts = useQuery({
     queryKey: ["shelter-products"],
@@ -187,9 +195,14 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
   );
   const issueQty = issueLines.reduce((sum, line) => sum + line.qty, 0);
 
-  const shopTotal = useMemo(() => {
-    return (shopProducts.data ?? []).reduce((sum, p) => sum + (shopCart[p.id] || 0) * Number(p.unitPrice), 0);
-  }, [shopCart, shopProducts.data]);
+  const shopLines = useMemo(
+    () =>
+      (shopProducts.data ?? [])
+        .filter((p) => (shopCart[p.id] || 0) > 0)
+        .map((p) => ({ product: p, qty: shopCart[p.id], total: shopCart[p.id] * Number(p.unitPrice) })),
+    [shopCart, shopProducts.data],
+  );
+  const shopTotal = shopLines.reduce((sum, line) => sum + line.total, 0);
 
   const postConsume = useMutation({
     mutationFn: () =>
@@ -258,8 +271,8 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
   });
   const addSku = useMutation({
     mutationFn: () =>
-      api("/api/pos/products", {
-        method: "POST",
+      api(editingSkuId != null ? `/api/pos/products/${editingSkuId}` : "/api/pos/products", {
+        method: editingSkuId != null ? "PUT" : "POST",
         body: JSON.stringify({
           sku: sku.sku,
           name: sku.name,
@@ -269,10 +282,31 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pos-products"] });
-      setSkuOpen(false);
-      setSku({ sku: "", name: "", unitPrice: "", barcode: "" });
+      closeSkuModal();
     },
   });
+
+  function openNewSku() {
+    setEditingSkuId(null);
+    setSku({ sku: "", name: "", unitPrice: "", barcode: "" });
+    setSkuOpen(true);
+  }
+
+  function openEditSku(p: ShopProduct) {
+    setEditingSkuId(p.id);
+    setSku({ sku: p.sku, name: p.name, unitPrice: String(p.unitPrice ?? ""), barcode: p.barcode ?? "" });
+    setSkuOpen(true);
+  }
+
+  function closeSkuModal() {
+    setSkuOpen(false);
+    setEditingSkuId(null);
+    setSku({ sku: "", name: "", unitPrice: "", barcode: "" });
+  }
+
+  function jumpTo(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   function bumpIssue(product: ShelterProduct, delta: number) {
     setIssueCart((prev) => {
@@ -323,7 +357,7 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
     });
   }
 
-  const title = manager ? "Stock out" : "Request stock";
+  const title = manager ? "Issue stock" : "Request stock";
   const description = shop
     ? "Search the buyer, then tap SKUs. Credit is checked against unpaid dues before you complete the sale."
     : manager
@@ -340,17 +374,21 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
         title={title}
         description={description}
         actions={
-          manager ? (
-            shop ? (
-              <Button variant="outline" onClick={() => setSkuOpen(true)}>
-                New SKU
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={() => setProductOpen(true)}>
-                New product
-              </Button>
-            )
-          ) : undefined
+          <>
+            <Button variant="outline" onClick={() => jumpTo(shop ? "recent-sales" : "recent-issues")}>
+              {shop ? "Recent sales ↓" : "Recent issues ↓"}
+            </Button>
+            {manager &&
+              (shop ? (
+                <Button variant="outline" onClick={openNewSku}>
+                  New SKU
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => setProductOpen(true)}>
+                  New product
+                </Button>
+              ))}
+          </>
         }
       />
 
@@ -494,6 +532,11 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
                         −
                       </Button>
                     ) : null}
+                    {manager ? (
+                      <Button variant="outline" aria-label={`Edit ${p.name}`} onClick={() => setEditProduct(p)}>
+                        Edit
+                      </Button>
+                    ) : null}
                   </div>
                 </Card>
               );
@@ -558,6 +601,9 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
                       −
                     </Button>
                   ) : null}
+                  <Button variant="outline" aria-label={`Edit ${p.name}`} onClick={() => openEditSku(p)}>
+                    Edit
+                  </Button>
                 </div>
               </Card>
             ))}
@@ -566,7 +612,7 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
       )}
 
       {shop && (
-        <Card>
+        <Card id="recent-sales" className="scroll-mt-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="font-semibold">Recent sales</h2>
             <ExportExcelButton
@@ -637,7 +683,7 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
       )}
 
       {!shop && (
-        <Card>
+        <Card id="recent-issues" className="scroll-mt-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="font-semibold">Recent issues</h2>
             <ExportExcelButton
@@ -765,8 +811,18 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
         </div>
       )}
 
-      {shop && shopTotal > 0 && (
+      {shop && shopLines.length > 0 && (
         <div className="sticky bottom-20 z-20 rounded-2xl bg-ink p-4 text-sand shadow-lg md:bottom-3">
+          <ul className="mb-3 max-h-40 space-y-1 overflow-y-auto border-b border-sand/20 pb-3 text-sm">
+            {shopLines.map((line) => (
+              <li key={line.product.id} className="flex items-center justify-between gap-3">
+                <span className="min-w-0 truncate">
+                  {line.product.name} × {line.qty}
+                </span>
+                <span className="shrink-0 opacity-80">{inr(line.total)}</span>
+              </li>
+            ))}
+          </ul>
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase opacity-70">Sale ticket {me?.fullName}</p>
@@ -794,7 +850,14 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
           }}
         />
       </Modal>
-      <Modal open={skuOpen} title="New staff-store SKU" onClose={() => setSkuOpen(false)}>
+      <Modal open={!!editProduct} title="Edit product" onClose={() => setEditProduct(null)}>
+        {editProduct && <CatalogProductForm key={editProduct.id} product={{ ...editProduct, sku: editProduct.sku ?? "" }} onCreated={() => setEditProduct(null)} />}
+      </Modal>
+      <Modal
+        open={skuOpen}
+        title={editingSkuId != null ? "Edit staff-store SKU" : "New staff-store SKU"}
+        onClose={closeSkuModal}
+      >
         <form
           className="space-y-3"
           onSubmit={(e: FormEvent) => {
@@ -826,7 +889,7 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
           </div>
           {addSku.error && <p className="text-sm text-clay">{(addSku.error as Error).message}</p>}
           <Button className="w-full" disabled={addSku.isPending}>
-            Save SKU
+            {editingSkuId != null ? "Save changes" : "Save SKU"}
           </Button>
         </form>
       </Modal>

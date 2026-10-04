@@ -10,6 +10,7 @@ import com.dertz.spectra.model.Supplier;
 import com.dertz.spectra.model.SupplierPayment;
 import com.dertz.spectra.request.AuditRequest;
 import com.dertz.spectra.request.AuditReviewRequest;
+import com.dertz.spectra.request.BatchExpiryRequest;
 import com.dertz.spectra.request.ConsumeRequest;
 import com.dertz.spectra.request.GrnRequest;
 import com.dertz.spectra.request.IssueConsumeRequest;
@@ -25,6 +26,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,6 +50,13 @@ public class InventoryController extends BaseController {
 	@PreAuthorize("hasAnyRole('NGO_ADMIN','BRANCH_ADMIN','INVENTORY_MANAGER')")
 	public ResponseEntity<ApiResponse<ShelterProduct>> createProduct(@Valid @RequestBody ShelterProductRequest request) {
 		return ok(inventoryService.createProduct(request), "Product created");
+	}
+
+	@PutMapping("/products/{id}")
+	@PreAuthorize("hasAnyRole('NGO_ADMIN','BRANCH_ADMIN','INVENTORY_MANAGER')")
+	public ResponseEntity<ApiResponse<ShelterProduct>> updateProduct(@PathVariable Long id,
+			@Valid @RequestBody ShelterProductRequest request) {
+		return ok(inventoryService.updateProduct(id, request), "Product updated");
 	}
 
 	@GetMapping("/suppliers")
@@ -103,6 +112,13 @@ public class InventoryController extends BaseController {
 	@PreAuthorize("hasAnyRole('NGO_ADMIN','BRANCH_ADMIN','INVENTORY_MANAGER')")
 	public ResponseEntity<ApiResponse<List<StockBatch>>> batches() {
 		return ok(inventoryService.batches());
+	}
+
+	@PutMapping("/batches/{id}")
+	@PreAuthorize("hasAnyRole('NGO_ADMIN','BRANCH_ADMIN','INVENTORY_MANAGER')")
+	public ResponseEntity<ApiResponse<StockBatch>> updateBatchExpiry(@PathVariable Long id,
+			@Valid @RequestBody BatchExpiryRequest request) {
+		return ok(inventoryService.updateBatchExpiry(id, request), "Expiry updated");
 	}
 
 	@PostMapping("/consume")

@@ -48,6 +48,7 @@ import com.dertz.spectra.repository.UserBranchRepository;
 import com.dertz.spectra.repository.UserRepository;
 import com.dertz.spectra.repository.WarehouseRepository;
 import com.dertz.spectra.request.AuditRequest;
+import com.dertz.spectra.request.BatchExpiryRequest;
 import com.dertz.spectra.request.AuditReviewRequest;
 import com.dertz.spectra.request.ConsumeRequest;
 import com.dertz.spectra.request.GrnRequest;
@@ -127,6 +128,26 @@ public class InventoryService {
 				.clinicalUse(clinical)
 				.active(true)
 				.build();
+		return shelterProductRepository.save(product);
+	}
+
+	@Transactional
+	public ShelterProduct updateProduct(Long id, ShelterProductRequest request) {
+		ShelterProduct product = requireProduct(id);
+		product.setSku(request.getSku().trim());
+		product.setName(request.getName().trim());
+		product.setUnit(request.getUnit());
+		product.setBarcode(request.getBarcode());
+		product.setVaccineIntervalDays(request.getVaccineIntervalDays());
+		if (request.getReorderLevel() != null) {
+			product.setReorderLevel(request.getReorderLevel());
+		}
+		if (request.getUnitPrice() != null) {
+			product.setUnitPrice(request.getUnitPrice());
+		}
+		if (request.getUnitCost() != null) {
+			product.setUnitCost(request.getUnitCost());
+		}
 		return shelterProductRepository.save(product);
 	}
 
@@ -241,6 +262,14 @@ public class InventoryService {
 	@Transactional(readOnly = true)
 	public List<StockBatch> batches() {
 		return stockBatchRepository.findByWarehouseIdOrderByExpiryDateAsc(shelterWarehouse(BranchScope.requireBranchId()).getId());
+	}
+
+	@Transactional
+	public StockBatch updateBatchExpiry(Long batchId, BatchExpiryRequest request) {
+		StockBatch batch = stockBatchRepository.findById(batchId)
+				.orElseThrow(() -> new ResourceNotFoundException("Batch not found"));
+		batch.setExpiryDate(request.getExpiryDate());
+		return stockBatchRepository.save(batch);
 	}
 
 	@Transactional
@@ -786,7 +815,7 @@ public class InventoryService {
 			InternalConsumptionItem first = allocated.stream()
 					.filter(i -> Objects.equals(i.getShelterProductId(), tx.getShelterProductId()))
 					.findFirst()
-					.orElse(allocated.isEmpty() ? null : allocated.getFirst());
+					.orElse(allocated.isEmpty() ? null : allocated.get(0));
 			ShelterProduct product = shelterProductRepository.findById(tx.getShelterProductId()).orElse(null);
 			int interval = product != null && product.getVaccineIntervalDays() != null
 					? product.getVaccineIntervalDays()

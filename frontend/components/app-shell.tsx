@@ -36,7 +36,7 @@ const NAV: { href: string; label: string; dock?: string; icon: typeof HeartHands
   { href: "/residents", label: "Dogs", dock: "Dogs", icon: HeartHandshake, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "VET_TECH_EMPLOYEE", "INVENTORY_MANAGER"], group: "Care" },
   { href: "/inventory/grn", label: "Receive stock", dock: "Receive", icon: Warehouse, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER"], group: "Stock" },
   { href: "/inventory/po", label: "Purchase orders", icon: FileText, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER", "EMPLOYEE"], group: "Stock" },
-  { href: "/inventory/consume", label: "Issue stock", dock: "Stock out", icon: Bone, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER", "VET_TECH_EMPLOYEE", "EMPLOYEE"], group: "Stock" },
+  { href: "/inventory/consume", label: "Issue stock", dock: "Issue stock", icon: Bone, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER", "VET_TECH_EMPLOYEE", "EMPLOYEE"], group: "Stock" },
   { href: "/inventory/audit", label: "Stock audit", icon: ClipboardList, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER"], group: "Stock" },
   { href: "/pos", label: "Staff shop", dock: "Shop", icon: ShoppingCart, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER"], group: "Stock" },
   { href: "/pos/stock", label: "Shop stock", icon: TrendingUp, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER"], group: "Stock" },
