@@ -40,6 +40,7 @@ const NAV: { href: string; label: string; dock?: string; icon: typeof HeartHands
   { href: "/inventory/audit", label: "Stock audit", icon: ClipboardList, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER"], group: "Stock" },
   { href: "/pos", label: "Staff shop", dock: "Shop", icon: ShoppingCart, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER"], group: "Stock" },
   { href: "/pos/stock", label: "Shop stock", icon: TrendingUp, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER"], group: "Stock" },
+  { href: "/branches", label: "Branches", icon: Building2, roles: ["NGO_ADMIN"], group: "People" },
   { href: "/users", label: "People", icon: Users, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER"], group: "People" },
   { href: "/passbook", label: "Passbook", icon: Wallet, roles: ["EMPLOYEE", "VET_TECH_EMPLOYEE"], group: "People" },
   { href: "/leave", label: "Leave / LOP", dock: "Leave", icon: CalendarDays, roles: ["NGO_ADMIN", "BRANCH_ADMIN", "EMPLOYEE", "VET_TECH_EMPLOYEE", "INVENTORY_MANAGER"], group: "People" },

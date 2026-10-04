@@ -238,7 +238,7 @@ public class DataSeeder implements ApplicationRunner {
 					.reorderLevel(BigDecimal.ZERO).lotTracked(false).qtyOnHand(new BigDecimal("40"))
 					.unitPrice(new BigDecimal("280.00")).unitCost(new BigDecimal("220.00"))
 					.staffSale(true).clinicalUse(false).active(true).build());
-			shelterProductRepository.save(ShelterProduct.builder()
+			ShelterProduct soap = shelterProductRepository.save(ShelterProduct.builder()
 					.tenantId(tenantId).sku("RET-SOAP").name("Bath Soap").unit(UnitOfMeasure.PIECE)
 					.category(ShelterProductCategory.STAFF_RETAIL).barcode("890200000002")
 					.reorderLevel(BigDecimal.ZERO).lotTracked(false).qtyOnHand(new BigDecimal("80"))
@@ -250,6 +250,10 @@ public class DataSeeder implements ApplicationRunner {
 					.reorderLevel(BigDecimal.ZERO).lotTracked(false).qtyOnHand(new BigDecimal("100"))
 					.unitPrice(new BigDecimal("30.00")).unitCost(new BigDecimal("18.00"))
 					.staffSale(true).clinicalUse(false).active(true).build());
+
+			inventoryService.seedSimpleQty(branch.getId(), rice, new BigDecimal("40"));
+			inventoryService.seedSimpleQty(branch.getId(), snack, new BigDecimal("100"));
+			inventoryService.seedSimpleQty(branch.getId(), soap, new BigDecimal("80"));
 
 			StaffPosOrder order = staffPosOrderRepository.save(StaffPosOrder.builder()
 					.tenantId(tenantId).branchId(branch.getId())
@@ -265,10 +269,8 @@ public class DataSeeder implements ApplicationRunner {
 					.tenantId(tenantId).orderId(order.getId()).productId(snack.getId())
 					.qty(BigDecimal.ONE).unitPrice(snack.getUnitPrice()).lineTotal(snack.getUnitPrice())
 					.unitCost(snack.getUnitCost()).lineCost(snack.getUnitCost()).build());
-			rice.setQtyOnHand(rice.getQtyOnHand().subtract(BigDecimal.ONE));
-			snack.setQtyOnHand(snack.getQtyOnHand().subtract(BigDecimal.ONE));
-			shelterProductRepository.save(rice);
-			shelterProductRepository.save(snack);
+			inventoryService.seedSimpleQty(branch.getId(), rice, new BigDecimal("39"));
+			inventoryService.seedSimpleQty(branch.getId(), snack, new BigDecimal("99"));
 
 			log.info("Seeded Spectra NGO demo tenant. Users: admin@spectra.org / branch@spectra.org / inventory@spectra.org / vet@spectra.org / employee@spectra.org password Spectra@123");
 			log.info("Seeded NGO admin id {}", admin.getId());

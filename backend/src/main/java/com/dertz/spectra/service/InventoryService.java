@@ -1,6 +1,7 @@
 package com.dertz.spectra.service;
 
 import com.dertz.spectra.Enum.AnalyticsAlertType;
+import com.dertz.spectra.Enum.AuditReason;
 import com.dertz.spectra.Enum.AuditStatus;
 import com.dertz.spectra.Enum.ConsumptionStatus;
 import com.dertz.spectra.Enum.ConsumptionType;
@@ -14,6 +15,7 @@ import com.dertz.spectra.Enum.WarehouseType;
 import com.dertz.spectra.exception.BusinessException;
 import com.dertz.spectra.exception.ResourceNotFoundException;
 import com.dertz.spectra.model.AnalyticsAlert;
+import com.dertz.spectra.model.BranchStock;
 import com.dertz.spectra.model.DogExpenseLink;
 import com.dertz.spectra.model.DogVaccination;
 import com.dertz.spectra.model.Resident;
@@ -31,6 +33,7 @@ import com.dertz.spectra.model.User;
 import com.dertz.spectra.model.UserBranch;
 import com.dertz.spectra.model.Warehouse;
 import com.dertz.spectra.repository.AnalyticsAlertRepository;
+import com.dertz.spectra.repository.BranchStockRepository;
 import com.dertz.spectra.repository.DogExpenseLinkRepository;
 import com.dertz.spectra.repository.DogVaccinationRepository;
 import com.dertz.spectra.repository.ResidentRepository;
@@ -86,6 +89,7 @@ public class InventoryService {
 	private final PurchaseGrnRepository purchaseGrnRepository;
 	private final PurchaseGrnItemRepository purchaseGrnItemRepository;
 	private final StockBatchRepository stockBatchRepository;
+	private final BranchStockRepository branchStockRepository;
 	private final WarehouseRepository warehouseRepository;
 	private final InternalConsumptionRepository consumptionRepository;
 	private final InternalConsumptionItemRepository consumptionItemRepository;
@@ -121,14 +125,18 @@ public class InventoryService {
 				.vaccineIntervalDays(request.getVaccineIntervalDays())
 				.reorderLevel(request.getReorderLevel() == null ? BigDecimal.ZERO : request.getReorderLevel())
 				.lotTracked(lotTracked)
-				.qtyOnHand(nz(request.getQtyOnHand()))
+				.qtyOnHand(BigDecimal.ZERO)
 				.unitPrice(nz(request.getUnitPrice()))
 				.unitCost(nz(request.getUnitCost()))
 				.staffSale(staffSale)
 				.clinicalUse(clinical)
 				.active(true)
 				.build();
-		return shelterProductRepository.save(product);
+		product = shelterProductRepository.save(product);
+		if (!lotTracked && nz(request.getQtyOnHand()).signum() > 0) {
+			setSimpleQty(shelterWarehouse(BranchScope.requireBranchId()).getId(), product, request.getQtyOnHand());
+		}
+		return product;
 	}
 
 	@Transactional
@@ -148,7 +156,81 @@ public class InventoryService {
 		if (request.getUnitCost() != null) {
 			product.setUnitCost(request.getUnitCost());
 		}
-		return shelterProductRepository.save(product);
+		product = shelterProductRepository.save(product);
+		adjustSimpleQty(product, request.getQtyOnHand());
+		return product;
+	}
+
+	/** Sets this branch's quantity for a simple product (no-op for lot-tracked or null) and records the adjustment. */
+	@Transactional
+	public void adjustSimpleQty(ShelterProduct product, BigDecimal newQty) {
+		if (newQty == null || Boolean.TRUE.equals(product.getLotTracked())) {
+			return;
+		}
+		Long branchId = BranchScope.requireBranchId();
+		Warehouse warehouse = shelterWarehouse(branchId);
+		BigDecimal old = simpleQtyForUpdate(warehouse.getId(), product.getId());
+		if (old.compareTo(newQty) == 0) {
+			return;
+		}
+		setSimpleQty(warehouse.getId(), product, newQty);
+		logAdjustment(branchId, warehouse.getId(), product.getId(), null, old, newQty);
+	}
+
+	/** Seeding helper: sets a branch quantity without an audit trail. */
+	@Transactional
+	public void seedSimpleQty(Long branchId, ShelterProduct product, BigDecimal qty) {
+		setSimpleQty(shelterWarehouse(branchId).getId(), product, qty);
+	}
+
+	/** Receives stock of a simple product into a warehouse, re-averaging the unit cost. */
+	@Transactional
+	public void receiveSimple(Long warehouseId, ShelterProduct product, BigDecimal qty, BigDecimal unitCost) {
+		BigDecimal old = simpleQtyForUpdate(warehouseId, product.getId());
+		product.setUnitCost(weightedAverage(old, product.getUnitCost(), qty, unitCost));
+		shelterProductRepository.save(product);
+		setSimpleQty(warehouseId, product, old.add(qty));
+	}
+
+	private void logAdjustment(Long branchId, Long warehouseId, Long productId, Long batchId, BigDecimal oldQty,
+			BigDecimal newQty) {
+		auditLogRepository.save(InventoryAuditLog.builder()
+				.tenantId(TenantContext.require().tenantId())
+				.branchId(branchId)
+				.warehouseId(warehouseId)
+				.shelterProductId(productId)
+				.batchId(batchId)
+				.systemQty(oldQty)
+				.physicalQty(newQty)
+				.reason(AuditReason.MANUAL_ADJUSTMENT)
+				.status(AuditStatus.APPROVED_WRITE_OFF)
+				.reviewedBy(BranchScope.currentUserId())
+				.reviewedAt(Instant.now())
+				.notes("Quantity edited directly")
+				.build());
+	}
+
+	private BigDecimal simpleQty(Long warehouseId, Long productId) {
+		return branchStockRepository.findByWarehouseIdAndShelterProductId(warehouseId, productId)
+				.map(row -> nz(row.getQtyOnHand()))
+				.orElse(BigDecimal.ZERO);
+	}
+
+	private BigDecimal simpleQtyForUpdate(Long warehouseId, Long productId) {
+		return branchStockRepository.lockByWarehouseAndProduct(warehouseId, productId)
+				.map(row -> nz(row.getQtyOnHand()))
+				.orElse(BigDecimal.ZERO);
+	}
+
+	private void setSimpleQty(Long warehouseId, ShelterProduct product, BigDecimal qty) {
+		BranchStock row = branchStockRepository.lockByWarehouseAndProduct(warehouseId, product.getId())
+				.orElseGet(() -> BranchStock.builder()
+						.tenantId(TenantContext.require().tenantId())
+						.warehouseId(warehouseId)
+						.shelterProductId(product.getId())
+						.build());
+		row.setQtyOnHand(qty);
+		branchStockRepository.save(row);
 	}
 
 	@Transactional(readOnly = true)
@@ -234,10 +316,7 @@ public class InventoryService {
 						.receivedAt(grn.getReceivedAt())
 						.build());
 			} else {
-				product.setUnitCost(weightedAverage(product.getQtyOnHand(), product.getUnitCost(), line.getQuantity(),
-						line.getUnitLandedCost()));
-				product.setQtyOnHand(nz(product.getQtyOnHand()).add(line.getQuantity()));
-				shelterProductRepository.save(product);
+				receiveSimple(warehouse.getId(), product, line.getQuantity(), line.getUnitLandedCost());
 			}
 		}
 		grn.setTotalAmount(total);
@@ -269,6 +348,16 @@ public class InventoryService {
 		StockBatch batch = stockBatchRepository.findById(batchId)
 				.orElseThrow(() -> new ResourceNotFoundException("Batch not found"));
 		batch.setExpiryDate(request.getExpiryDate());
+		BigDecimal old = batch.getQtyOnHand();
+		if (request.getQtyOnHand() != null && old.compareTo(request.getQtyOnHand()) != 0) {
+			Warehouse warehouse = shelterWarehouse(BranchScope.requireBranchId());
+			if (!warehouse.getId().equals(batch.getWarehouseId())) {
+				throw new ResourceNotFoundException("Batch not found");
+			}
+			batch.setQtyOnHand(request.getQtyOnHand());
+			logAdjustment(warehouse.getBranchId(), warehouse.getId(), batch.getShelterProductId(), batch.getId(), old,
+					request.getQtyOnHand());
+		}
 		return stockBatchRepository.save(batch);
 	}
 
@@ -508,7 +597,7 @@ public class InventoryService {
 		} else if (Boolean.TRUE.equals(product.getLotTracked())) {
 			systemQty = stockBatchRepository.sumQty(warehouse.getId(), product.getId());
 		} else {
-			systemQty = nz(product.getQtyOnHand());
+			systemQty = simpleQty(warehouse.getId(), product.getId());
 		}
 		return auditLogRepository.save(InventoryAuditLog.builder()
 				.tenantId(tenantId)
@@ -553,12 +642,11 @@ public class InventoryService {
 				batch.setQtyOnHand(next);
 				stockBatchRepository.save(batch);
 			} else if (!Boolean.TRUE.equals(product.getLotTracked())) {
-				BigDecimal next = nz(product.getQtyOnHand()).add(delta);
+				BigDecimal next = simpleQtyForUpdate(log.getWarehouseId(), product.getId()).add(delta);
 				if (next.compareTo(BigDecimal.ZERO) < 0) {
 					next = BigDecimal.ZERO;
 				}
-				product.setQtyOnHand(next);
-				shelterProductRepository.save(product);
+				setSimpleQty(log.getWarehouseId(), product, next);
 			} else if (delta.compareTo(BigDecimal.ZERO) < 0) {
 				deduct(log.getTenantId(), null, log.getWarehouseId(), product, delta.abs(), null, null, null);
 			}
@@ -668,7 +756,7 @@ public class InventoryService {
 		if (Boolean.TRUE.equals(product.getLotTracked())) {
 			return stockBatchRepository.sumQty(shelterWarehouse(BranchScope.requireBranchId()).getId(), product.getId());
 		}
-		return nz(product.getQtyOnHand());
+		return simpleQty(shelterWarehouse(BranchScope.requireBranchId()).getId(), product.getId());
 	}
 
 	private List<InternalConsumptionItem> deduct(Long tenantId, Long consumptionId, Long warehouseId,
@@ -677,12 +765,12 @@ public class InventoryService {
 			return allocateFefo(tenantId, consumptionId, warehouseId, product.getId(), qty, costCenter, takenByUserId,
 					residentId);
 		}
-		if (nz(product.getQtyOnHand()).compareTo(qty) < 0) {
+		BigDecimal onHand = simpleQtyForUpdate(warehouseId, product.getId());
+		if (onHand.compareTo(qty) < 0) {
 			throw new BusinessException("Insufficient stock for " + product.getName(), "INSUFFICIENT_STOCK",
 					HttpStatus.CONFLICT);
 		}
-		product.setQtyOnHand(product.getQtyOnHand().subtract(qty));
-		shelterProductRepository.save(product);
+		setSimpleQty(warehouseId, product, onHand.subtract(qty));
 		List<InternalConsumptionItem> items = new ArrayList<>();
 			if (consumptionId != null) {
 				items.add(consumptionItemRepository.save(InternalConsumptionItem.builder()
@@ -903,9 +991,9 @@ public class InventoryService {
 	}
 
 	private void hydrateAvailableQty(Long warehouseId, ShelterProduct product) {
-		if (Boolean.TRUE.equals(product.getLotTracked())) {
-			product.setQtyOnHand(stockBatchRepository.sumQty(warehouseId, product.getId()));
-		}
+		product.setQtyOnHand(Boolean.TRUE.equals(product.getLotTracked())
+				? stockBatchRepository.sumQty(warehouseId, product.getId())
+				: simpleQty(warehouseId, product.getId()));
 	}
 
 	private static BigDecimal weightedAverage(BigDecimal oldQty, BigDecimal oldCost, BigDecimal buyQty, BigDecimal buyCost) {

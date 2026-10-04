@@ -108,6 +108,24 @@ public class OrgService {
 				.toList();
 	}
 
+	@Transactional
+	public BranchDTO updateBranch(Long id, CreateBranchRequest request) {
+		Branch branch = branchRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
+		branchRepository.findByCodeIgnoreCase(request.getCode()).ifPresent(existing -> {
+			if (!existing.getId().equals(id)) {
+				throw new BusinessException("Branch code already exists", "DUPLICATE_BRANCH");
+			}
+		});
+		branch.setName(request.getName());
+		branch.setCode(request.getCode().toUpperCase());
+		branch.setAddress(request.getAddress());
+		branch.setCity(request.getCity());
+		if (request.getStatus() != null) {
+			branch.setStatus(request.getStatus());
+		}
+		return toDto(branchRepository.save(branch));
+	}
+
 	@Transactional(readOnly = true)
 	public BranchDTO getBranch(Long id) {
 		Branch branch = branchRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Branch not found"));

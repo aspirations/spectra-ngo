@@ -110,7 +110,7 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
   const [tender, setTender] = useState("PAYROLL_CREDIT");
   const [productOpen, setProductOpen] = useState(false);
   const [skuOpen, setSkuOpen] = useState(false);
-  const [sku, setSku] = useState({ sku: "", name: "", unitPrice: "", barcode: "" });
+  const [sku, setSku] = useState({ sku: "", name: "", unitPrice: "", barcode: "", qty: "" });
   const [editingSkuId, setEditingSkuId] = useState<number | null>(null);
   const [editProduct, setEditProduct] = useState<ShelterProduct | null>(null);
 
@@ -278,6 +278,7 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
           name: sku.name,
           unitPrice: Number(sku.unitPrice),
           barcode: sku.barcode || null,
+          qtyOnHand: sku.qty !== "" ? Number(sku.qty) : undefined,
         }),
       }),
     onSuccess: () => {
@@ -288,20 +289,20 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
 
   function openNewSku() {
     setEditingSkuId(null);
-    setSku({ sku: "", name: "", unitPrice: "", barcode: "" });
+    setSku({ sku: "", name: "", unitPrice: "", barcode: "", qty: "" });
     setSkuOpen(true);
   }
 
   function openEditSku(p: ShopProduct) {
     setEditingSkuId(p.id);
-    setSku({ sku: p.sku, name: p.name, unitPrice: String(p.unitPrice ?? ""), barcode: p.barcode ?? "" });
+    setSku({ sku: p.sku, name: p.name, unitPrice: String(p.unitPrice ?? ""), barcode: p.barcode ?? "", qty: String(p.qtyOnHand ?? "") });
     setSkuOpen(true);
   }
 
   function closeSkuModal() {
     setSkuOpen(false);
     setEditingSkuId(null);
-    setSku({ sku: "", name: "", unitPrice: "", barcode: "" });
+    setSku({ sku: "", name: "", unitPrice: "", barcode: "", qty: "" });
   }
 
   function jumpTo(id: string) {
@@ -882,6 +883,10 @@ export function StockOutDesk({ mode }: { mode: StockOutMode }) {
               onChange={(e) => setSku({ ...sku, unitPrice: e.target.value })}
               required
             />
+          </div>
+          <div>
+            <Label>Quantity in stock (this branch)</Label>
+            <Input type="number" min="0" step="0.001" value={sku.qty} onChange={(e) => setSku({ ...sku, qty: e.target.value })} />
           </div>
           <div>
             <Label>Barcode</Label>

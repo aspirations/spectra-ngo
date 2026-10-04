@@ -19,6 +19,7 @@ export type EditableProduct = CatalogProduct & {
   lotTracked?: boolean;
   unitPrice?: number;
   unitCost?: number;
+  qtyOnHand?: number;
 };
 
 const empty = {
@@ -32,6 +33,7 @@ const empty = {
   lotTracked: true,
   unitPrice: "",
   unitCost: "",
+  qtyOnHand: "",
 };
 
 type Lot = { id: number; shelterProductId: number; batchNumber: string; expiryDate: string; qtyOnHand: number };
@@ -39,9 +41,11 @@ type Lot = { id: number; shelterProductId: number; batchNumber: string; expiryDa
 function LotRow({ lot }: { lot: Lot }) {
   const qc = useQueryClient();
   const [expiry, setExpiry] = useState(lot.expiryDate);
+  const [qty, setQty] = useState(String(lot.qtyOnHand));
+  const dirty = expiry !== lot.expiryDate || Number(qty) !== Number(lot.qtyOnHand);
   const save = useMutation({
     mutationFn: () =>
-      api(`/api/inventory/batches/${lot.id}`, { method: "PUT", body: JSON.stringify({ expiryDate: expiry }) }),
+      api(`/api/inventory/batches/${lot.id}`, { method: "PUT", body: JSON.stringify({ expiryDate: expiry, qtyOnHand: Number(qty) }) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock-batches"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -55,7 +59,8 @@ function LotRow({ lot }: { lot: Lot }) {
       </p>
       <div className="mt-1 flex gap-2">
         <Input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
-        <Button type="button" variant="outline" disabled={save.isPending || !expiry || expiry === lot.expiryDate} onClick={() => save.mutate()}>
+        <Input type="number" min="0" step="0.001" aria-label="Quantity in this lot" className="w-28" value={qty} onChange={(e) => setQty(e.target.value)} />
+        <Button type="button" variant="outline" disabled={save.isPending || !expiry || qty === "" || !dirty} onClick={() => save.mutate()}>
           {save.isPending ? "Saving…" : "Update"}
         </Button>
       </div>
@@ -69,7 +74,7 @@ function LotList({ productId }: { productId: number }) {
   const lots = (batches.data ?? []).filter((b) => b.shelterProductId === productId && Number(b.qtyOnHand) > 0);
   return (
     <div>
-      <Label>Available lots (change expiry)</Label>
+      <Label>Available lots (change expiry or quantity at this branch)</Label>
       {batches.isLoading && <p className="text-sm text-ink/50">Loading lots…</p>}
       {!batches.isLoading && lots.length === 0 && <p className="text-sm text-ink/50">No stock in any lot right now.</p>}
       <ul className="space-y-2">
@@ -94,6 +99,7 @@ function toForm(p?: EditableProduct) {
     lotTracked: p.lotTracked ?? true,
     unitPrice: p.unitPrice ? String(p.unitPrice) : "",
     unitCost: p.unitCost ? String(p.unitCost) : "",
+    qtyOnHand: p.qtyOnHand != null ? String(p.qtyOnHand) : "",
   };
 }
 
@@ -124,6 +130,7 @@ export function CatalogProductForm({
           clinicalUse: form.category !== "STAFF_RETAIL",
           unitPrice: form.unitPrice ? Number(form.unitPrice) : 0,
           unitCost: form.unitCost ? Number(form.unitCost) : 0,
+          qtyOnHand: !form.lotTracked && form.qtyOnHand !== "" ? Number(form.qtyOnHand) : undefined,
         }),
       }),
     onSuccess: (product) => {
@@ -213,6 +220,12 @@ export function CatalogProductForm({
           </div>
         )}
       </div>
+      {!form.lotTracked && (
+        <div>
+          <Label>Quantity in stock (this branch)</Label>
+          <Input type="number" min="0" step="0.001" value={form.qtyOnHand} onChange={(e) => setForm({ ...form, qtyOnHand: e.target.value })} />
+        </div>
+      )}
       <div>
         <Label>Barcode (optional)</Label>
         <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />

@@ -188,12 +188,14 @@ public class DogCareDataSeeder implements ApplicationRunner {
 				.reorderLevel(BigDecimal.ZERO).lotTracked(false).qtyOnHand(BigDecimal.ZERO)
 				.unitPrice(new BigDecimal("280.00")).unitCost(new BigDecimal("220.00")).staffSale(true).clinicalUse(false)
 				.active(true).build());
-		shelterProductRepository.save(ShelterProduct.builder()
+		ShelterProduct tea = shelterProductRepository.save(ShelterProduct.builder()
 				.tenantId(tenantId).sku("STAFF-TEA").name("Tea Pack")
 				.unit(UnitOfMeasure.PIECE).category(ShelterProductCategory.STAFF_RETAIL).barcode("892000000002")
 				.reorderLevel(BigDecimal.ZERO).lotTracked(false).qtyOnHand(new BigDecimal("40"))
 				.unitPrice(new BigDecimal("90.00")).unitCost(new BigDecimal("55.00")).staffSale(true).clinicalUse(false)
 				.active(true).build());
+
+		inventoryService.seedSimpleQty(branch.getId(), tea, new BigDecimal("40"));
 
 		Supplier supplier = supplierRepository.save(Supplier.builder()
 				.tenantId(tenantId).branchId(branch.getId()).name("Canine Supplies Co")
@@ -238,8 +240,7 @@ public class DogCareDataSeeder implements ApplicationRunner {
 				.tenantId(tenantId).orderId(order.getId()).productId(rice.getId())
 				.qty(BigDecimal.ONE).unitPrice(rice.getUnitPrice()).lineTotal(rice.getUnitPrice())
 				.unitCost(rice.getUnitCost()).lineCost(rice.getUnitCost()).build());
-		rice.setQtyOnHand(rice.getQtyOnHand().subtract(BigDecimal.ONE));
-		shelterProductRepository.save(rice);
+		inventoryService.seedSimpleQty(branch.getId(), rice, new BigDecimal("24"));
 
 		LocalDate today = LocalDate.now();
 		LocalDate lopDay = today.minusDays(2);

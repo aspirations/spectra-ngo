@@ -43,6 +43,13 @@ public class OrgController extends BaseController {
 		return ok(orgService.createBranch(request), "Branch provisioned");
 	}
 
+	@PutMapping("/branches/{id}")
+	@PreAuthorize("hasRole(NGO_ADMIN)")
+	public ResponseEntity<ApiResponse<BranchDTO>> updateBranch(@PathVariable Long id,
+			@Valid @RequestBody CreateBranchRequest request) {
+		return ok(orgService.updateBranch(id, request), "Branch updated");
+	}
+
 	@GetMapping("/users")
 	@PreAuthorize("hasAnyRole('NGO_ADMIN','BRANCH_ADMIN','INVENTORY_MANAGER')")
 	public ResponseEntity<ApiResponse<List<UserDTO>>> users() {

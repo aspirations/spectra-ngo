@@ -80,7 +80,9 @@ public class StaffPosService {
 		}
 		product.setBarcode(request.getBarcode());
 		product.setStaffSale(true);
-		return productRepository.save(product);
+		product = productRepository.save(product);
+		inventoryService.adjustSimpleQty(product, request.getQtyOnHand());
+		return product;
 	}
 
 	@Transactional(readOnly = true)
@@ -110,9 +112,7 @@ public class StaffPosService {
 			BigDecimal buyCost = line.getUnitCost().setScale(2, RoundingMode.HALF_UP);
 			BigDecimal lineTotal = buyQty.multiply(buyCost).setScale(2, RoundingMode.HALF_UP);
 			total = total.add(lineTotal);
-			product.setUnitCost(weightedAverage(product.getQtyOnHand(), product.getUnitCost(), buyQty, buyCost));
-			product.setQtyOnHand(product.getQtyOnHand().add(buyQty));
-			productRepository.save(product);
+			inventoryService.receiveSimple(warehouse.getId(), product, buyQty, buyCost);
 			lines.add(StaffStorePurchaseItem.builder()
 					.tenantId(tenantId)
 					.productId(product.getId())
@@ -391,16 +391,6 @@ public class StaffPosService {
 		catalog.setUnitCost(request.getUnitCost());
 		catalog.setQtyOnHand(request.getQtyOnHand());
 		return catalog;
-	}
-
-	private static BigDecimal weightedAverage(BigDecimal oldQty, BigDecimal oldCost, BigDecimal buyQty, BigDecimal buyCost) {
-		BigDecimal onHand = nz(oldQty);
-		BigDecimal cost = nz(oldCost);
-		BigDecimal newQty = onHand.add(buyQty);
-		if (newQty.compareTo(BigDecimal.ZERO) <= 0) {
-			return buyCost;
-		}
-		return onHand.multiply(cost).add(buyQty.multiply(buyCost)).divide(newQty, 2, RoundingMode.HALF_UP);
 	}
 
 	private static BigDecimal nz(BigDecimal value) {
