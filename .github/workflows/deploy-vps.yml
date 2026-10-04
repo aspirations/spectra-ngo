@@ -45,7 +45,7 @@ jobs:
         run: |
           JAR=$(ls backend/target/*.jar | grep -v original | head -n 1)
           scp -i ~/.ssh/id_deploy -P "${{ secrets.VPS_PORT || 22 }}" "$JAR" \
-            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$DEPLOY_DIR/app.jar.new"
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/spectra-app.jar.new"
 
       - name: Swap jar, restart, health-check (rolls back on failure)
         run: |
@@ -54,8 +54,9 @@ jobs:
             "DEPLOY_DIR=$DEPLOY_DIR SERVICE=$SERVICE HEALTH_URL=$HEALTH_URL bash -s" <<'REMOTE'
           set -euo pipefail
           cd "$DEPLOY_DIR"
-          cp -f app.jar app.jar.prev
-          mv -f app.jar.new app.jar
+          sudo cp -f app.jar app.jar.prev
+          sudo install -o spectra -g spectra -m 644 /tmp/spectra-app.jar.new app.jar
+          rm -f /tmp/spectra-app.jar.new
           sudo systemctl restart "$SERVICE"
           for i in $(seq 1 30); do
             if curl -fsS "$HEALTH_URL" >/dev/null; then
@@ -65,7 +66,7 @@ jobs:
             sleep 3
           done
           echo "Health check failed, rolling back" >&2
-          cp -f app.jar.prev app.jar
+          sudo cp -f app.jar.prev app.jar
           sudo systemctl restart "$SERVICE"
           exit 1
           REMOTE
