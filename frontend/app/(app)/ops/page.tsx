@@ -34,6 +34,36 @@ type Staff = { id: number; fullName: string };
 const OPEX_CATS = ["FUEL", "VET_FEE", "MAINTENANCE", "MEDICATION", "FOOD", "TRANSPORT", "OTHER"];
 const SOURCES = ["NGO_CASH", "WORKER_PAID", "DONOR_FUND"];
 
+const EMPTY_OPEX = {
+  category: "MAINTENANCE",
+  description: "",
+  amount: "",
+  paymentSource: "NGO_CASH",
+  vendorName: "",
+  receiptUrl: "",
+  paidByUserId: "",
+  residentId: "",
+};
+const EMPTY_FUEL = {
+  vehicleLabel: "",
+  odometerKm: "",
+  litres: "",
+  amount: "",
+  paymentSource: "NGO_CASH",
+  paidByUserId: "",
+  receiptUrl: "",
+};
+const EMPTY_DOG = { residentId: "", label: "", amount: "" };
+
+function SavedNote({ text }: { text: string | null }) {
+  if (!text) return null;
+  return (
+    <p role="status" className="rounded-xl bg-leaf/15 px-3 py-2 text-sm font-semibold text-moss">
+      ✓ {text}
+    </p>
+  );
+}
+
 export default function OpsPage() {
   const qc = useQueryClient();
   const snap = useQuery({ queryKey: ["ops-snapshot"], queryFn: () => api<Snapshot>("/api/ops/snapshot") });
@@ -43,26 +73,14 @@ export default function OpsPage() {
   const residents = useQuery({ queryKey: ["residents"], queryFn: () => api<Resident[]>("/api/residents") });
   const staff = useQuery({ queryKey: ["users"], queryFn: () => api<Staff[]>("/api/users") });
 
-  const [opex, setOpex] = useState({
-    category: "MAINTENANCE",
-    description: "",
-    amount: "",
-    paymentSource: "NGO_CASH",
-    vendorName: "",
-    receiptUrl: "",
-    paidByUserId: "",
-    residentId: "",
-  });
-  const [fuel, setFuel] = useState({
-    vehicleLabel: "",
-    odometerKm: "",
-    litres: "",
-    amount: "",
-    paymentSource: "NGO_CASH",
-    paidByUserId: "",
-    receiptUrl: "",
-  });
-  const [dog, setDog] = useState({ residentId: "", label: "", amount: "" });
+  const [opex, setOpex] = useState(EMPTY_OPEX);
+  const [fuel, setFuel] = useState(EMPTY_FUEL);
+  const [dog, setDog] = useState(EMPTY_DOG);
+  const [notice, setNotice] = useState<{ form: "opex" | "fuel" | "dog"; text: string } | null>(null);
+  function flash(form: "opex" | "fuel" | "dog", text: string) {
+    setNotice({ form, text });
+    window.setTimeout(() => setNotice((n) => (n?.text === text && n.form === form ? null : n)), 4000);
+  }
   const [slaQ, setSlaQ] = useState("");
   const [opexExportBusy, setOpexExportBusy] = useState(false);
   const slaRows = useMemo(() => {
@@ -85,6 +103,8 @@ export default function OpsPage() {
       qc.invalidateQueries({ queryKey: ["ops-snapshot"] });
       qc.invalidateQueries({ queryKey: ["dog-expenses"] });
       qc.invalidateQueries({ queryKey: ["ops-activity"] });
+      setOpex(EMPTY_OPEX);
+      flash("opex", "Expense saved");
     },
   });
   const saveFuel = useMutation({
@@ -102,6 +122,8 @@ export default function OpsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ops-snapshot"] });
       qc.invalidateQueries({ queryKey: ["ops-activity"] });
+      setFuel(EMPTY_FUEL);
+      flash("fuel", "Fuel fill logged");
     },
   });
   const saveDog = useMutation({
@@ -113,6 +135,8 @@ export default function OpsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dog-expenses"] });
       qc.invalidateQueries({ queryKey: ["ops-snapshot"] });
+      setDog(EMPTY_DOG);
+      flash("dog", "Cost linked to dog");
     },
   });
   const ack = useMutation({
@@ -220,7 +244,10 @@ export default function OpsPage() {
               searchPlaceholder="Dog name or tag…"
             />
             {saveOpex.error && <p className="text-sm text-clay">{(saveOpex.error as Error).message}</p>}
-            <Button className="w-full">Save expense</Button>
+            <SavedNote text={notice?.form === "opex" ? notice.text : null} />
+            <Button className="w-full" disabled={saveOpex.isPending}>
+              {saveOpex.isPending ? "Saving…" : "Save expense"}
+            </Button>
           </form>
         </Fold>
         <Fold title="Fuel / odometer" defaultOpen>
@@ -238,7 +265,10 @@ export default function OpsPage() {
             </Select>
             <Input placeholder="Receipt URL" value={fuel.receiptUrl} onChange={(e) => setFuel({ ...fuel, receiptUrl: e.target.value })} />
             {saveFuel.error && <p className="text-sm text-clay">{(saveFuel.error as Error).message}</p>}
-            <Button className="w-full">Log fill</Button>
+            <SavedNote text={notice?.form === "fuel" ? notice.text : null} />
+            <Button className="w-full" disabled={saveFuel.isPending}>
+              {saveFuel.isPending ? "Saving…" : "Log fill"}
+            </Button>
           </form>
         </Fold>
       </div>
@@ -254,8 +284,11 @@ export default function OpsPage() {
           />
           <Input placeholder="Label" value={dog.label} onChange={(e) => setDog({ ...dog, label: e.target.value })} required />
           <Input type="number" step="0.01" placeholder="₹" value={dog.amount} onChange={(e) => setDog({ ...dog, amount: e.target.value })} required />
-          <Button className="sm:col-span-3">Link cost</Button>
+          <Button className="sm:col-span-3" disabled={saveDog.isPending}>
+            {saveDog.isPending ? "Saving…" : "Link cost"}
+          </Button>
         </form>
+        <SavedNote text={notice?.form === "dog" ? notice.text : null} />
         {saveDog.error && <p className="text-sm text-clay">{(saveDog.error as Error).message}</p>}
         <ul className="space-y-2 text-sm">
           {dogExp.data?.map((x) => (
